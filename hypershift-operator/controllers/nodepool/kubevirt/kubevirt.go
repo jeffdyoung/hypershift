@@ -41,6 +41,8 @@ func defaultImage(nodePoolArch string, releaseImage *releaseinfo.ReleaseImage) (
 	switch nodePoolArch {
 	case hyperv1.ArchitectureS390X:
 		archName = hyperv1.ArchitectureS390X
+	case hyperv1.ArchitectureARM64:
+		archName = hyperv1.ArchAliases[hyperv1.ArchitectureARM64]
 	default:
 		archName = hyperv1.ArchAliases[hyperv1.ArchitectureAMD64]
 	}
@@ -204,6 +206,31 @@ func virtualMachineTemplateBase(nodePool *hyperv1.NodePool, bootImage BootImage)
 		template.Spec.Template.Spec.Domain.Memory = &kubevirtv1.Memory{Guest: &memory}
 		if cores > 0 {
 			template.Spec.Template.Spec.Domain.CPU = &kubevirtv1.CPU{Cores: cores}
+		}
+	}
+
+	// Configure architecture-specific firmware and machine settings
+	if nodePool.Spec.Arch == hyperv1.ArchitectureARM64 {
+		// ARM64 requires explicit EFI firmware configuration to boot properly
+		template.Spec.Template.Spec.Domain.Firmware = &kubevirtv1.Firmware{
+			Bootloader: &kubevirtv1.Bootloader{
+				EFI: &kubevirtv1.EFI{
+					SecureBoot: ptr.To(false),
+				},
+			},
+		}
+		// Set ARM64 machine type
+		template.Spec.Template.Spec.Domain.Machine = &kubevirtv1.Machine{
+			Type: "virt",
+		}
+		// Set CPU model to host-passthrough for best performance
+		// Preserve cores if already set
+		if template.Spec.Template.Spec.Domain.CPU != nil {
+			template.Spec.Template.Spec.Domain.CPU.Model = "host-passthrough"
+		} else {
+			template.Spec.Template.Spec.Domain.CPU = &kubevirtv1.CPU{
+				Model: "host-passthrough",
+			}
 		}
 	}
 
