@@ -94,7 +94,17 @@ func GetImage(nodePool *hyperv1.NodePool, releaseImage *releaseinfo.ReleaseImage
 
 	imageName, imageHash, err := defaultImage(nodePool.Spec.Arch, releaseImage)
 	if err != nil && allowUnsupportedRHCOSVariants(nodePool) {
-		imageName, imageHash, err = openstack.OpenstackDefaultImage(releaseImage)
+		// Determine architecture name for OpenStack image lookup
+		var archName string
+		switch nodePool.Spec.Arch {
+		case hyperv1.ArchitectureS390X:
+			archName = hyperv1.ArchitectureS390X
+		case hyperv1.ArchitectureARM64:
+			archName = hyperv1.ArchAliases[hyperv1.ArchitectureARM64]
+		default:
+			archName = hyperv1.ArchAliases[hyperv1.ArchitectureAMD64]
+		}
+		imageName, imageHash, err = openstack.OpenstackDefaultImage(releaseImage, archName)
 		if err != nil {
 			return nil, err
 		}

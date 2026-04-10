@@ -95,7 +95,8 @@ func GetOpenStackClusterForHostedCluster(ctx context.Context, c client.Client, h
 // ReconcileOpenStackImageSpec reconciles the OpenStack ImageSpec for the given HostedCluster.
 // The image spec will be set to the default RHCOS image for the given release.
 func ReconcileOpenStackImageSpec(hcluster *hyperv1.HostedCluster, openStackImageSpec *orc.ImageSpec, release *releaseinfo.ReleaseImage) error {
-	imageURL, imageHash, err := OpenstackDefaultImage(release)
+	// Default to x86_64 for backward compatibility
+	imageURL, imageHash, err := OpenstackDefaultImage(release, "x86_64")
 	if err != nil {
 		return fmt.Errorf("failed to lookup RHCOS image: %w", err)
 	}
@@ -129,12 +130,13 @@ func ReconcileOpenStackImageSpec(hcluster *hyperv1.HostedCluster, openStackImage
 	return nil
 }
 
-// OpenstackDefaultImage returns the default RHCOS image for the given release.
+// OpenstackDefaultImage returns the default RHCOS image for the given release and architecture.
 // The image URL and SHA256 hash are returned.
-func OpenstackDefaultImage(releaseImage *releaseinfo.ReleaseImage) (string, string, error) {
-	arch, foundArch := releaseImage.StreamMetadata.Architectures["x86_64"]
+// archName should be the release metadata architecture name (e.g., "x86_64", "aarch64", "s390x", "ppc64le")
+func OpenstackDefaultImage(releaseImage *releaseinfo.ReleaseImage, archName string) (string, string, error) {
+	arch, foundArch := releaseImage.StreamMetadata.Architectures[archName]
 	if !foundArch {
-		return "", "", fmt.Errorf("couldn't find OS metadata for architecture %q", "x86_64")
+		return "", "", fmt.Errorf("couldn't find OS metadata for architecture %q", archName)
 	}
 	openStack, exists := arch.Artifacts["openstack"]
 	if !exists {

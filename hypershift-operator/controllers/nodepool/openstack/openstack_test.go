@@ -290,7 +290,7 @@ func TestOpenstackDefaultImage(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			url, hash, err := OpenstackDefaultImage(tc.releaseImage)
+			url, hash, err := OpenstackDefaultImage(tc.releaseImage, "x86_64")
 			if tc.expectedError {
 				if err == nil {
 					t.Error("expected error but got nil")
